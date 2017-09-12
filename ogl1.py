@@ -1,5 +1,10 @@
 #  First Python OpenGL Program
 #  ogl1.py
+#**************FIRST ASSIGNMENT************************
+#experiment with this
+#change things
+#remove things
+#add things
 
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
@@ -8,7 +13,7 @@ import sys
 
 def draw():
 	glClear(GL_COLOR_BUFFER_BIT)
-	glutWireTeapot(0.5)
+	glutSolidTeapot(0.5)
 	glFlush()
 	
 glutInit(sys.argv)
