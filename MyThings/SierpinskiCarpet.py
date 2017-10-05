@@ -14,20 +14,21 @@ third = [211,130,255,0,0,0,0]
 first = [x/255.0 for x in first]
 second = [x/255.0 for x in second]
 third = [x/255.0 for x in third]
-
+first = first[::-1]
+second = second[::-1]
+third = third[::-1]
 
 def init():
-	glClearColor(1.0, 0.0, 0.0, 0.0)
+	glClearColor(1.0, 1.0, 1.0, 0.0)
 	gluOrtho2D(0.0, 81.0, 0.0, 81.0)
 
 def frac(origin,width,step):
-    glColor3f(first[int(step)%7],second[int(step)%7],third[int(step)%7])
+    glColor3f(first[int(step+2)%7],second[int(step+2)%7],third[int(step+2)%7])
     if step > 6.0:
         return
     x = width/3.0
     a = origin[0]
     b = origin[1]
-    time.sleep(.5)
     glBegin(GL_QUADS)
     glVertex2f(a+2*x,b+x)
     glVertex2f(a+2*x,b+2*x)
@@ -48,7 +49,7 @@ def frac(origin,width,step):
 
 def plotPoints():
     glClear(GL_COLOR_BUFFER_BIT)
-    glClearColor(0.0, 0.0, 0.0, 0.0)
+    glClearColor(1.0, 1.0, 1.0, 0.0)
     glColor3f(0.5,0.5,0.5)
     
     
