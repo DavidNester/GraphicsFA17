@@ -1,7 +1,7 @@
 # GraphicsFA17
 For assignments from Graphics class at EMU. (Fall 2017)
 
-###Folder: CoolThings
+### Folder: CoolThings
 --BouncingSpinningBall.py - A wire sphere spinning as it bounces across the window
 --Fractals
     SierpinskiCarpet.py
