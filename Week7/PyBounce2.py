@@ -74,10 +74,6 @@ def plotfunc():
         #glTranslatef(0, 0, 0);
         glTranslate(x_pos, y_pos, 0)
         glRotatef(ang, 0.0, 0.0, 0.01)
-        #glutSolidSphere(0.1, 30, 30)
-        # glutWireCube(0.1)
-        # glutWireTeapot(0.1)
-        # glutSolidTeapot(0.1)
         glutWireSphere(0.1, 10, 10)
         glPopMatrix()
         
