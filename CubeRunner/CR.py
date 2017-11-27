@@ -2,7 +2,8 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 from OpenGL.GLUT import *
 import sys
-from random import randint
+from random import randint, gauss
+import time
 
 # static global variables
 WIDTH = 1400
@@ -12,57 +13,79 @@ MAX_HEIGHT = 5
 BETWEEN_BLOCKS = 4
 SQUARE_LENGTH = 40
 GROUND = -4
+PLAYER_Z = -7
+TIME = 0
+DESTROY_BLOCKS = 40
 
-#TODO: Ground
-#TODO: Scoreboard
-#TODO: Collisions
-#TODO: Lighting
-#TODO: Shading
-#TODO: Block Creation function
+# TODO: Shadows
+# TODO: Clouds of some kind
+# TODO: Adjust lighting
 
 
 class FloatingBlock(object):
     # class for floating blocks
     def __init__(self):
-        # initialize with random height
+        # initialize with x value that is from normal distribution centered at 0 on x axis with SD of 55
         self.y = GROUND + 1
-        self.x = randint(-100, 100)
+        self.x = gauss(0, 55)
         self.z = -100
 
     def points(self):
         return self.x, self.y, self.z
 
     def inc(self, z_st, x_st=0):
-        # move to by a given step
+        # move by a given step
         self.z += z_st
         self.x += x_st
 
+    def render(self):
+        a, b, c = self.points()
+        glPushMatrix()
+        glTranslatef(a, b, c)
+        draw_cube()
+        glPopMatrix()
+
     def inside(self, pos):
         # checks if position is inside floating block
-        x, y = pos
-        a = SQUARE_LENGTH/2
-        if self.x-a <= x <= self.x+a and self.y-a <= y <= self.y+a:
+        # we only care about x and z for this game
+        x, y, z = pos
+        a = 1
+        if self.x-a <= x <= self.x+a and self.z-a <= z <= self.z+a:
             return True
         return False
 
 
 # game variables
 floating_blocks = [FloatingBlock()]
-
+floating_blocks_old = []
 left_pressed = False
 right_pressed = False
 step = 1
 score = -step
 game_over = False
-start = False
 x_step = 0
+end_rot = 0
+start = True
 
 # added for 3D
 # perspective variables
 fovy = 60.0
 aspect = float(WIDTH)/float(HEIGHT)
-zNear = 0.1
+zNear = .1
 zFar = 100
+
+# LIGHTING Light values and coordinates
+light_x = 40.0
+light_y = 0.0
+light_z = 5.0
+ambientLight = (0.5, 0.5, 0.5, 1.0)
+diffuseLight = (0.75, 0.75, 0.75, 0.7)
+specular = (1.0, 1.0, 1.0, 1.0)
+specref = (1.0, 1.0, 1.0, 1.0)
+lightPos = [light_x, light_y, 100.0, 1.0]
+auto_light = False
+light_theta = 0.0
+light_circle_radius = 150.0
 
 
 def draw_cube():
@@ -71,12 +94,16 @@ def draw_cube():
 
     # note that one of the x, y, or z values will be the
     # same for all the points in that plane
+    # colors changed between vertices to give gradient effect
 
-    glColor3f(1.0, 0.0, 0.0)
     # top
+    glColor3f(0.05, 0.45, 0.70)
     glVertex3f(1.0, 1.0, -1.0)
+    glColor3f(0.1, 0.58, 0.68)
     glVertex3f(-1.0, 1.0, -1.0)
+    glColor3f(0.05, 0.45, 0.70)
     glVertex3f(-1.0, 1.0, 1.0)
+    glColor3f(0.1, 0.58, 0.68)
     glVertex3f(1.0, 1.0, 1.0)
 
     glColor3f(1.0, 0.0, 0.0)
@@ -86,132 +113,170 @@ def draw_cube():
     glVertex3f(-1.0, -1.0, -1.0)
     glVertex3f(1.0, -1.0, -1.0)
 
-    glColor3f(0.0, 1.0, 0.0)
     # front
+    glColor3f(0.63, 0.84, 0.89)
     glVertex3f(1.0, 1.0, 1.0)
+    glColor3f(0.5, 0.70, 0.89)
     glVertex3f(-1.0, 1.0, 1.0)
+    glColor3f(0.63, 0.84, 0.89)
     glVertex3f(-1.0, -1.0, 1.0)
+    glColor3f(0.5, 0.70, 0.89)
     glVertex3f(1.0, -1.0, 1.0)
 
-    glColor3f(1.0, 1.0, 0.0)
     # back
+    glColor3f(0.63, 0.84, 0.89)
     glVertex3f(1.0, -1.0, -1.0)
+    glColor3f(0.5, 0.70, 0.89)
     glVertex3f(-1.0, -1.0, -1.0)
+    glColor3f(0.63, 0.84, 0.89)
     glVertex3f(-1.0, 1.0, -1.0)
+    glColor3f(0.5, 0.70, 0.89)
     glVertex3f(1.0, 1.0, -1.0)
 
-    glColor3f(0.0, 0.0, 1.0)
     # left side
+    glColor3f(0.30, 0.60, 0.90)
     glVertex3f(-1.0, 1.0, 1.0)
+    glColor3f(0.15, 0.32, 0.45)
     glVertex3f(-1.0, 1.0, -1.0)
+    glColor3f(0.30, 0.60, 0.90)
     glVertex3f(-1.0, -1.0, -1.0)
+    glColor3f(0.15, 0.32, 0.45)
     glVertex3f(-1.0, -1.0, 1.0)
 
-    glColor3f(1.0, 0.0, 1.0)
     # right side
+    glColor3f(.02, 0.22, 0.32)
     glVertex3f(1.0, 1.0, -1.0)
+    glColor3f(.04, 0.44, 0.64)
     glVertex3f(1.0, 1.0, 1.0)
+    glColor3f(.02, 0.22, 0.32)
     glVertex3f(1.0, -1.0, 1.0)
+    glColor3f(.04, 0.44, 0.64)
     glVertex3f(1.0, -1.0, -1.0)
 
     glEnd()
 
 
-def draw_ground():
-    glPushMatrix()
+def draw_ground_and_sky():
+
     glBegin(GL_QUADS)
+    glColor3f(0, 191 / 255, 1.0)
+    glVertex3f(-WIDTH, GROUND, -zFar)
+    glVertex3f(WIDTH, GROUND, -zFar)
+    glColor3f(0.4, 230 / 255, 1.0)
+    glVertex3f(WIDTH, GROUND+40, -zFar/2)
+    glVertex3f(-WIDTH, GROUND+40, -zFar/2)
 
-    glColor3f(1.0, 0.0, 0.0)
-    glVertex3f(-WIDTH, GROUND, 0)
+    glColor3f(.55, .75, .30)
+    glVertex3f(-WIDTH, GROUND, zFar)
     glVertex3f(WIDTH, GROUND, zFar)
-    glVertex3f(WIDTH, GROUND, zFar)
-    glVertex3f(-WIDTH, GROUND, 0)
-
+    glColor3f(.20, .35, .15)
+    glVertex3f(WIDTH, GROUND, -zFar)
+    glVertex3f(-WIDTH, GROUND, -zFar)
     glEnd()
-    glPopMatrix()
 
 
-def draw_floating():
-    # draw floating blocks
-    for block in floating_blocks:
-        a, b, c = block.points()
-        glPushMatrix()
-        glTranslatef(a, b, c)
-        draw_cube()
-        glPopMatrix()
-
-
-def draw_player(a=SQUARE_LENGTH/2):
-    # draw player square
+def draw_player():
+    # draw player
     glPushMatrix()
     glTranslatef(0, GROUND+1, -7)
     glBegin(GL_TRIANGLES)
 
-    #left
-    glColor3f(0,1,0)
-    glVertex3f(-0.35,0,1)
-    glVertex3f(0, .003, 0)
-    glVertex3f(0, 0, -1)
-
-    #right
+    # colors changed in between vertices to give gradient effect
+    glColor3f(1, 1, 1)
+    # left
     glColor3f(1, 0, 0)
-    glVertex3f(0.35, 0, 1)
-    glVertex3f(0, .003, 0)
+    glVertex3f(-0.35, 0, 1)
+    glColor3f(192/255, 192/255, 192/255)
+    glVertex3f(0, .3, .5)
+    glColor3f(1, 0, 0)
     glVertex3f(0, 0, -1)
 
-    #back
+    # right
+    glColor3f(0, 1, 0)
+    glVertex3f(0.35, 0, 1)
+    glColor3f(192/255, 192/255, 192/255)
+    glVertex3f(0, .3, .5)
+    glColor3f(0, 1, 0)
+    glVertex3f(0, 0, -1)
+
+    # back
     glColor3f(0, 0, 1)
     glVertex3f(-0.35, 0, 1)
-    glVertex3f(0, .003, 0)
+    glColor3f(192/255, 192/255, 192/255)
+    glVertex3f(0, .3, .5)
+    glColor3f(0, 0, 1)
     glVertex3f(0.35, 0, 1)
     glEnd()
+
     glPopMatrix()
 
+
 def check_collision():
+    if score < 95:
+        return False
     # check if any of the corners are inside any of the blocks
-    a = SQUARE_LENGTH/2
-    corners = [(x_pos-a, y_pos-a), (x_pos+a, y_pos-a), (x_pos+a, y_pos+a), (x_pos-a, y_pos+a)]
-    for corner in corners:
-        for i in range(min(3, len(floating_blocks))):
-            if floating_blocks[i].inside(corner):
+    # points are the coordinates of the player plus the translation amounts
+    points = [(0, GROUND+1, -8), (-.35, GROUND+1, -6), (.35, GROUND+1, -6)]
+    for point in points:
+        # could probably check fewer blocks but used a large selection to ensure collisions are always caught
+        for block in floating_blocks[0:52]:
+            if block.inside(point):
                 return True
-        for j in range(7, 10):
-            if (SQUARE_LENGTH*j - offset) <= int(corner[0]) <= (SQUARE_LENGTH*(j+1) - offset):
-                if corner[1] > HEIGHT - SQUARE_LENGTH*top_squares[j] or corner[1] < SQUARE_LENGTH*bottom_squares[j]:
-                    return True
     return False
 
 
-def end_of_game():
-    # expanding player to fill screen animation
-    for i in range(0, WIDTH, 10):
-        draw_player(i)
-        glutSwapBuffers()
-    disp_text(WIDTH / 2 - 1.5 * SQUARE_LENGTH - 5, HEIGHT / 2, 'Score: ' + str(score), white=False)
-    disp_text(WIDTH / 2 - 1.5 * SQUARE_LENGTH, HEIGHT / 2 + 3 * SQUARE_LENGTH, 'GAME OVER!', white=False)
-    disp_text(WIDTH / 2 - 2.25 * SQUARE_LENGTH, HEIGHT / 2 - 3 * SQUARE_LENGTH, 'ENTER to Restart', white=False)
-    glutSwapBuffers()
-
-
-def disp_text(x, y, text, font=GLUT_BITMAP_9_BY_15, r=0, g=0, b=0, white=True):
-    # draw white square behind score
-    if white:
-        glColor3f(1, 1, 1)
-        glBegin(GL_QUADS)
-        glVertex2f(0, HEIGHT - 1.5 * SQUARE_LENGTH)
-        glVertex2f(4 * SQUARE_LENGTH, HEIGHT - 1.5 * SQUARE_LENGTH)
-        glVertex2f(4 * SQUARE_LENGTH, HEIGHT)
-        glVertex2f(0, HEIGHT)
-        glEnd()
+def disp_text(x, y, text, font=GLUT_STROKE_ROMAN, r=0, g=0, b=0):
+    glPushMatrix()
+    glTranslatef(x, y, -20)
+    glScalef(1.0 / 152.38, 1.0 / 152.38, 1.0 / 152.38)
     # draw text
     glColor3f(r, g, b)
-    glRasterPos2f(x, y)
     for ch in text:
-        glutBitmapCharacter(font, ctypes.c_int(ord(ch)))
+        glutStrokeCharacter(font, ctypes.c_int(ord(ch)))
+    glPopMatrix()
+
+
+def automatic_light():
+    global light_x, light_y, light_z, light_theta
+    global light_circle_radius
+
+    # 150 just works well here, probably should be a parameter
+    r = light_circle_radius
+    light_x = r * cos(light_theta)
+    light_y = r * sin(light_theta)
+    light_theta += 0.003
+
+
+def move_and_set_light():
+    global lightPos, light_x, light_y
+    # LIGHT
+    if auto_light:
+        automatic_light()
+    # move light along elliptical path from right horizon to left horizon
+    light_x -= .09
+    if light_x < -40:
+        light_x = 40
+    light_y = 20 * ((1 - (light_x ** 2) / 1600) ** .5)
+    lightPos = [light_x, light_y, light_z, 1.0]
+    glLightfv(GL_LIGHT1, GL_POSITION, lightPos)
+
+
+def end_game():
+    global end_rot
+    disp_text(-2.5, 6, 'Score: ' + str(score))
+    disp_text(-2.8, 8, 'GAME OVER!')
+    disp_text(-4, 4, 'ENTER to Restart')
+    draw_ground_and_sky()
+    # rotate around the center of the player
+    glTranslatef(0, 0, PLAYER_Z)
+    glRotatef(end_rot, 0.0, 1.0, 0.0)
+    glTranslatef(0, 0, -PLAYER_Z)
+    end_rot += .5
 
 
 def plotfunc():
-    global step, score, floating_blocks, game_over, x_step
+    global step, score, floating_blocks, game_over, x_step, left_pressed, right_pressed, end_rot, floating_blocks_old
+    global light_x, light_y, light_z, lightPos, auto_light, light_theta, start
     # erase and get ready to redraw
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
@@ -223,61 +288,64 @@ def plotfunc():
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
 
-    # initial instructions
-    #if not start:
-    #    disp_text(WIDTH / 2, HEIGHT / 2, 'Click To Start', r=1, g=1, b=1)
-    #    disp_text(WIDTH / 2, HEIGHT / 2-SQUARE_LENGTH, 'Press Space To Fly', r=1, g=1, b=1)
 
+    if start:
+        disp_text(-2.8, 8, 'CUBE RUNNER')
+    if score > 150: # removes CUBE RUNNER banner from screen
+        start = False
+    if check_collision():
+        left_pressed = right_pressed = False
+        game_over = True  # tells idle to stop re-displaying image
+    if game_over:
+        end_game()
+    else:
+        # display score
+        disp_text(-20, 10.6, "Score: " + str(score))
 
-    # draw blocks
+    if abs(x_step) < .1: # fixes issue where blocks were fluttering
+        x_step = 0
     draw_player()
-    glRotatef(-5 * x_step, 0, 0, 1)
-    draw_floating()
-    draw_ground()
+    move_and_set_light()
+    glRotatef(-5 * x_step, 0, 0, 1) # rotate world if keys pressed
+    for block in floating_blocks:
+        block.render()
+    draw_ground_and_sky()
 
-    if not randint(0,1):
-        floating_blocks += [FloatingBlock()]
-    if floating_blocks[0].z > 0:
-        floating_blocks.pop(0)
-
-    score += step
-    # determine direction that blocks need to move
-    if left_pressed:
-        x_step = min(1,x_step+.1)
-    if right_pressed:
-        x_step = max(-1,x_step-.1)
+    # move x step to 0 if keys not pressed
     if not left_pressed and not right_pressed and x_step != 0:
         x_step += .1 if x_step < 0 else -.1
-    for block in floating_blocks:
-        # move blocks towards camera and left or right
-        block.inc(step, x_st=x_step)
-    # display score
-    #disp_text(.5*SQUARE_LENGTH, HEIGHT - .75 * SQUARE_LENGTH, "Score: " + str(score))
+    if not game_over:
+        # add a block for every other redraw
+        if not randint(0, 1):
+            floating_blocks += [FloatingBlock()]
+        # keep blocks until they are 40 units behind camera
+        if floating_blocks[0].z > DESTROY_BLOCKS:
+            floating_blocks.pop(0)
+        score += step
+        # determine direction that blocks need to move
+        if left_pressed:
+            x_step = min(.8, x_step+.1)
+        if right_pressed:
+            x_step = max(-.8, x_step-.1)
+        for block in floating_blocks:
+            # move blocks towards camera and left or right
+            block.inc(step, x_st=x_step)
     glutSwapBuffers()
-    #if check_collision():
-    #   game_over = True  # tells idle to stop redisplaying image
-    #   end_of_game()  # does end of game animation and displays score
 
 
 def restart():
-    global top_squares, bottom_squares, floating_blocks, offset, x_pos, y_pos, key_pressed, vel, score, step, shield, \
-        next_block, game_over, start
+    global floating_blocks, right_pressed, left_pressed, x_step, score, step, start, game_over, end_rot
     # reset all game variables to initial state
-    top_squares = []
-    bottom_squares = []
     floating_blocks = [FloatingBlock()]
-    offset = 0
-    x_pos = 300
-    y_pos = 500
-    key_pressed = False
-    vel = -2
-    step = 2
+
+    left_pressed = False
+    right_pressed = False
+    step = 1
     score = -step
-    shield = False
-    next_block = BETWEEN_BLOCKS
     game_over = False
     start = False
-    populate_top_and_bottom()
+    x_step = 0
+    end_rot = 0
 
 
 def keyboard(key, x, y):
@@ -294,21 +362,25 @@ def keyboard(key, x, y):
 
 def special_input(key, x, y):
     global left_pressed, right_pressed
-    if key == GLUT_KEY_LEFT:
+    if key == GLUT_KEY_LEFT and not game_over:
         left_pressed = True
-    elif key == GLUT_KEY_RIGHT:
+    elif key == GLUT_KEY_RIGHT and not game_over:
         right_pressed = True
 
 
 def idle():
-    # redraw the window if the game has started and is not over
-    #if start and not game_over:
+    global TIME
+    # checks time since last redraw and waits for the difference if greater than set amount
+    # used to fix issue where it ran too fast on Windows
+    diff = time.clock() - TIME
+    TIME = time.clock()
+    if diff < .005:
+        time.sleep(.005-diff)
     glutPostRedisplay()
 
 
 def up(key, x, y):
     global left_pressed, right_pressed
-    # stop rising player when space bar is released
     if key == GLUT_KEY_LEFT:
         left_pressed = False
     elif key == GLUT_KEY_RIGHT:
@@ -324,20 +396,26 @@ def init():
     glDepthFunc(GL_LESS)
     glEnable(GL_DEPTH_TEST)
 
+    # LIGHTING
+    glEnable(GL_LIGHTING)
+    glLightfv(GL_LIGHT1, GL_AMBIENT, ambientLight)
+    glLightfv(GL_LIGHT1, GL_DIFFUSE, diffuseLight)
+    # glLightfv(GL_LIGHT1, GL_SPECULAR, specular)
+    glEnable(GL_LIGHT1)
+    glEnable(GL_COLOR_MATERIAL)
+    glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE)
+    glMaterialfv(GL_FRONT, GL_SPECULAR, specref)
+    glMateriali(GL_FRONT, GL_SHININESS, 128)
+
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
 
-    """
-    fovy - Specifies the field of view angle, in degrees, in the y direction. 
-    aspect - Specifies the aspect ratio that determines the field of view in the x direction. The aspect ratio is the ratio of x (width) to y (height). 
-    zNear - Specifies the distance from the viewer to the near clipping plane (always positive). 
-    zFar - Specifies the distance from the viewer to the far clipping plane (always positive). 
-    """
     gluPerspective(fovy, aspect, zNear, zFar)
 
     #  Set the matrix for the object we are drawing
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
+
 
 def main():
     glutInit(sys.argv)

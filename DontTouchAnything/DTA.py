@@ -3,6 +3,7 @@ from OpenGL.GLU import *
 from OpenGL.GLUT import *
 import sys
 from random import randint
+import time
 
 # static global variables
 WIDTH = 1400
@@ -10,7 +11,7 @@ HEIGHT = 800
 MAX_HEIGHT = 5
 BETWEEN_BLOCKS = 4
 SQUARE_LENGTH = 40
-
+TIME = 0
 
 class FloatingBlock(object):
     # class for floating blocks
@@ -268,7 +269,12 @@ def keyboard(key, x, y):
 
 
 def idle():
+    global TIME
     # redraw the window if the game has started and is not over
+    diff = time.clock() - TIME
+    TIME = time.clock()
+    if diff < .0025:
+        time.sleep(.0025 - diff)
     if start and not game_over:
         glutPostRedisplay()
 
