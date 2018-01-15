@@ -14,3 +14,6 @@ For assignments from Graphics class at EMU. (Fall 2017)
  
  ### Folder: CubeRunner
  - 3D game
+ 
+ ### Folder: Racing
+ - Start of final project before requirements changed. Driving down a dynamically changing road.
