@@ -4,6 +4,7 @@ from OpenGL.GLUT import *
 import sys
 from random import randint, gauss
 import time
+from PIL import Image
 
 # static global variables
 WIDTH = 1400
@@ -20,7 +21,25 @@ DESTROY_BLOCKS = 40
 # TODO: Shadows
 # TODO: Clouds of some kind
 # TODO: Adjust lighting
+def load_textures():
+    im = Image.open("bg2.jpg")
 
+    ix, iy = im.size
+
+    im = im.tobytes("raw", "RGBX", 0, -1)
+
+    # Create Texture
+    glBindTexture(GL_TEXTURE_2D, glGenTextures(1))  # 2d texture (x and y size)
+
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
+    glTexImage2D(GL_TEXTURE_2D, 0, 3, ix, iy, 0, GL_RGBA, GL_UNSIGNED_BYTE, im)
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP)
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP)
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL)
 
 class FloatingBlock(object):
     # class for floating blocks
@@ -157,23 +176,41 @@ def draw_cube():
 
 
 def draw_ground_and_sky():
-
+    glEnable(GL_TEXTURE_2D)
+    #glPushMatrix()
     glBegin(GL_QUADS)
-    glColor3f(0, 191 / 255, 1.0)
+    glTexCoord2f(0.0, 0.0);
+    glVertex3f(-125, GROUND, -zFar+1)  # Bottom Left Of The Texture and Quad
+    glTexCoord2f(1.0, 0.0);
+    glVertex3f(125, GROUND, -zFar+1)  # Bottom Right Of The Texture and Quad
+    glTexCoord2f(1.0, 1.0);
+    glVertex3f(125, GROUND + 65, -zFar+1)  # Top Right Of The Texture and Quad
+    glTexCoord2f(0.0, 1.0);
+    glVertex3f(-125, GROUND + 65, -zFar+1)  # Top Left Of The Texture and Quad
+    glEnd()
+    #glPopMatrix()
+
+    """
+    glBegin(GL_QUADS)
     glVertex3f(-WIDTH, GROUND, -zFar)
     glVertex3f(WIDTH, GROUND, -zFar)
     glColor3f(0.4, 230 / 255, 1.0)
     glVertex3f(WIDTH, GROUND+40, -zFar/2)
     glVertex3f(-WIDTH, GROUND+40, -zFar/2)
-
-    glColor3f(.55, .75, .30)
-    glVertex3f(-WIDTH, GROUND, zFar)
-    glVertex3f(WIDTH, GROUND, zFar)
-    glColor3f(.20, .35, .15)
-    glVertex3f(WIDTH, GROUND, -zFar)
-    glVertex3f(-WIDTH, GROUND, -zFar)
+    """
+    glBegin(GL_QUADS)
+    #glColor3f(.55, .75, .30)
+    glTexCoord2f(0.0, 0.0);
+    glVertex3f(-125, GROUND, zFar)
+    glTexCoord2f(1.0, 0.0);
+    glVertex3f(125, GROUND, zFar)
+    #glColor3f(.20, .35, .15)
+    glTexCoord2f(1.0, 1.0);
+    glVertex3f(125, GROUND, -zFar)
+    glTexCoord2f(0.0, 1.0);
+    glVertex3f(-125, GROUND, -zFar)
     glEnd()
-
+    glDisable(GL_TEXTURE_2D)
 
 def draw_player():
     # draw player
@@ -391,6 +428,8 @@ def init():
     global fovy, aspect, zNear, zFar
 
     glClearColor(0.5, 0.5, 0.5, 0.0)
+
+    load_textures()
 
     glClearDepth(1.0)
     glDepthFunc(GL_LESS)

@@ -18,17 +18,22 @@ PLAYER_Z = -7
 TIME = 0
 DESTROY_BLOCKS = 40
 
-# TODO: Shadows
-# TODO: Clouds of some kind
-# TODO: Adjust lighting
 
 
-class FloatingBlock(object):
+class City(object):
     # class for floating blocks
     def __init__(self):
         # initialize with x value that is from normal distribution centered at 0 on x axis with SD of 55
-        self.x = gauss(0, 55)
-        self.z = -100
+        self.buildings = [[1,1,1,3,2,4,2,1],
+                          [1,2,4,7,5,2,1,2],
+                          [3,1,1,4,8,3,4,1],
+                          [6,8,4,5,10,8,5,4],
+                          [7,5,12,9,15,8,9,6,3],
+                          [4,6,7,9,8,3,5,2],
+                          [2,5,3,7,4,5,2,1],
+                          [1,3,4,5,4,2,1,1]]
+        self.x = -18
+        self.z = -200
 
     def points(self):
         return self.x, GROUND + 1, self.z
@@ -37,13 +42,23 @@ class FloatingBlock(object):
         # move by a given step
         self.z += z_st
         self.x += x_st
+        self.z = max(-200,self.z)
+        self.z = min(200, self.z)
+        self.x = max(-200, self.z)
+        self.x = min(200, self.z)
 
     def render(self):
         a, b, c = self.points()
-        glPushMatrix()
-        glTranslatef(a, b, c)
-        draw_cube()
-        glPopMatrix()
+        i = 0
+        for row in self.buildings:
+            j = 0
+            for building in row:
+                j += 1
+                glPushMatrix()
+                glTranslatef(a+(10*j), b, c+(10*i))
+                draw_building(building)
+                glPopMatrix()
+            i += 1
 
     def inside(self, pos):
         # checks if position is inside floating block
@@ -54,9 +69,30 @@ class FloatingBlock(object):
             return True
         return False
 
+"""
+Current idea: Make a 3D vector that is updated with mouse clicks. Move everything the opposite of it. 
+"""
+
+class Vector:
+    def __init__(self):
+        self.x = 0
+        self.y = 0
+        self.z = -1
+
+    def down(self):
+        pass
+
+    def up(self):
+        pass
+
+    def left(self):
+        pass
+
+    def right(self):
+        pass
 
 # game variables
-floating_blocks = [FloatingBlock()]
+city = City()
 floating_blocks_old = []
 left_pressed = False
 right_pressed = False
@@ -76,7 +112,7 @@ player_y = -3
 fovy = 60.0
 aspect = float(WIDTH)/float(HEIGHT)
 zNear = .1
-zFar = 100
+zFar = 200
 
 # LIGHTING Light values and coordinates
 light_x = 40.0
@@ -90,6 +126,74 @@ lightPos = [light_x, light_y, 100.0, 1.0]
 auto_light = False
 light_theta = 0.0
 light_circle_radius = 150.0
+
+
+def draw_building(height):
+    # Draw Cube (multiple quads)
+    glBegin(GL_QUADS)
+
+    # note that one of the x, y, or z values will be the
+    # same for all the points in that plane
+    # colors changed between vertices to give gradient effect
+
+    # top
+    glColor3f(0.05, 0.45, 0.70)
+    glVertex3f(1.0, height, -1.0)
+    glColor3f(0.1, 0.58, 0.68)
+    glVertex3f(-1.0, height, -1.0)
+    glColor3f(0.05, 0.45, 0.70)
+    glVertex3f(-1.0, height, 1.0)
+    glColor3f(0.1, 0.58, 0.68)
+    glVertex3f(1.0, height, 1.0)
+
+    glColor3f(1.0, 0.0, 0.0)
+    # bottom
+    glVertex3f(1.0, -1.0, 1.0)
+    glVertex3f(-1.0, -1.0, 1.0)
+    glVertex3f(-1.0, -1.0, -1.0)
+    glVertex3f(1.0, -1.0, -1.0)
+
+    # front
+    glColor3f(0.63, 0.84, 0.89)
+    glVertex3f(1.0, height, 1.0)
+    glColor3f(0.5, 0.70, 0.89)
+    glVertex3f(-1.0, height, 1.0)
+    glColor3f(0.63, 0.84, 0.89)
+    glVertex3f(-1.0, -1.0, 1.0)
+    glColor3f(0.5, 0.70, 0.89)
+    glVertex3f(1.0, -1.0, 1.0)
+
+    # back
+    glColor3f(0.63, 0.84, 0.89)
+    glVertex3f(1.0, -1.0, -1.0)
+    glColor3f(0.5, 0.70, 0.89)
+    glVertex3f(-1.0, -1.0, -1.0)
+    glColor3f(0.63, 0.84, 0.89)
+    glVertex3f(-1.0, height, -1.0)
+    glColor3f(0.5, 0.70, 0.89)
+    glVertex3f(1.0, height, -1.0)
+
+    # left side
+    glColor3f(0.30, 0.60, 0.90)
+    glVertex3f(-1.0, height, 1.0)
+    glColor3f(0.15, 0.32, 0.45)
+    glVertex3f(-1.0, height, -1.0)
+    glColor3f(0.30, 0.60, 0.90)
+    glVertex3f(-1.0, -1.0, -1.0)
+    glColor3f(0.15, 0.32, 0.45)
+    glVertex3f(-1.0, -1.0, 1.0)
+
+    # right side
+    glColor3f(.02, 0.22, 0.32)
+    glVertex3f(1.0, height, -1.0)
+    glColor3f(.04, 0.44, 0.64)
+    glVertex3f(1.0, height, 1.0)
+    glColor3f(.02, 0.22, 0.32)
+    glVertex3f(1.0, -1.0, 1.0)
+    glColor3f(.04, 0.44, 0.64)
+    glVertex3f(1.0, -1.0, -1.0)
+
+    glEnd()
 
 
 def draw_cube():
@@ -279,7 +383,7 @@ def end_game():
 
 
 def plotfunc():
-    global step, score, floating_blocks, game_over, x_step, left_pressed, right_pressed, end_rot, floating_blocks_old
+    global step, score, city, game_over, x_step, left_pressed, right_pressed, end_rot
     global light_x, light_y, light_z, lightPos, auto_light, light_theta, start, y_step, GROUND
     # erase and get ready to redraw
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -306,45 +410,38 @@ def plotfunc():
         # display score
         disp_text(-20, 10.6, "Score: " + str(score))
     """
-    if abs(x_step) < .1: # fixes issue where blocks were fluttering
+    if abs(x_step) < .01: # fixes issue where blocks were fluttering
         x_step = 0
-    if abs(y_step) < .1:  # fixes issue where blocks were fluttering
+    if abs(y_step) < .01:  # fixes issue where blocks were fluttering
         y_step = 0
     draw_player()
     move_and_set_light()
     draw_ground_and_sky()
+    glTranslatef(-2 if x_step > 0 else 2, 0, PLAYER_Z + 2)
     glRotatef(-5 * x_step, 0, 1, 0)  # rotate world if keys pressed
-    glRotatef(-5 * y_step, 1, 0, 0)  # rotate world if keys pressed
-    for block in floating_blocks:
-        block.render()
+    glTranslatef(2 if x_step > 0 else -2, 0, -PLAYER_Z - 2)
+    #glRotatef(-5 * y_step, 1, 0, 0)  # rotate world if keys pressed
+    city.render()
 
     # move x step to 0 if keys not pressed
     #if not left_pressed and not right_pressed and x_step != 0:
     #    x_step += .1 if x_step < 0 else -.1
-    #if not down_pressed and not up_pressed and y_step != 0:
-    #    y_step += .1 if y_step < 0 else -.1
+    if not down_pressed and not up_pressed and y_step != 0:
+        y_step += .05 if y_step < 0 else -.05
     if not game_over:
-        # add a block for every other redraw
-        if not randint(0, 1):
-            floating_blocks += [FloatingBlock()]
-        # keep blocks until they are 40 units behind camera
-        if floating_blocks[0].z > DESTROY_BLOCKS:
-            floating_blocks.pop(0)
-        score += step
         if left_pressed:
-            x_step = x_step+.1
+            x_step = x_step + .25
         if right_pressed:
-            x_step = x_step-.1
+            x_step = x_step - .05
         if up_pressed:
-            y_step = y_step+.1
+            y_step = y_step + .25
         if down_pressed:
-            y_step = x_step-.1
+            y_step = x_step - .05
 
-        x_st = math.sin(-math.radians(-5 * x_step))
-        z_st = math.cos(-math.radians(-5 * x_step))
-        for block in floating_blocks:
-            # move blocks towards camera and left or right
-            block.inc(z_st, x_st)
+        x_st = .3*math.sin(-math.radians(-5 * x_step))
+        z_st = .3*math.cos(-math.radians(-5 * x_step))
+        city.inc(z_st, x_st)
+    print(x_step, y_step)
     GROUND += y_step
     GROUND = min(-3,GROUND)
     glutSwapBuffers()

@@ -27,7 +27,7 @@ def LoadTextures():
     
     #image = open("NeHe.bmp")
     # im = Image.open("NeHe.bmp")
-    im = Image.open("brickwall.jpg")
+    im = Image.open("bg.png")
     
     ix, iy = im.size
     # print ("ix, iy = ", ix, iy)
